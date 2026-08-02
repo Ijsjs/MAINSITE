@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.DS_Store
+*.db
+!data/.gitkeep
+__pycache__/
+*.pyc
+.env
+.vite/
+.Docker*
