@@ -1,0 +1,8 @@
+# Render / Docker
+#
+# 1. Push this repo to GitHub
+# 2. Render.com → New → Web Service → connect repo
+# 3. Runtime: Docker
+# 4. After deploy open the *.onrender.com URL
+# 5. Settings → Custom Domains → add 24jizer.ru
+# 6. In Timeweb DNS put the records Render shows
