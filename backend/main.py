@@ -2,6 +2,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
@@ -27,6 +28,9 @@ from schemas import (
 
 ADMIN_USERNAME = "jizer"
 ADMIN_PASSWORD = "jizer_admin"
+
+DIST_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+INDEX_HTML = DIST_DIR / "index.html"
 
 app = FastAPI(title="jizer site")
 
@@ -60,6 +64,7 @@ def seed_admin():
 def on_startup():
     Base.metadata.create_all(bind=engine)
     seed_admin()
+    print(f"[jizer] DIST_DIR={DIST_DIR} exists={DIST_DIR.exists()} index={INDEX_HTML.exists()}")
 
 
 def serialize_question(q: Question) -> QuestionOut:
@@ -206,6 +211,28 @@ def presence_online(admin: User = Depends(require_admin)):
     return presence.get_online()
 
 
-dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
-if dist.exists():
-    app.mount("/", StaticFiles(directory=str(dist), html=True), name="static")
+# Frontend (built files). Explicit routes — more reliable than mount("/") alone.
+if (DIST_DIR / "assets").exists():
+    app.mount("/assets", StaticFiles(directory=str(DIST_DIR / "assets")), name="assets")
+
+
+@app.get("/")
+def serve_index():
+    if INDEX_HTML.exists():
+        return FileResponse(INDEX_HTML)
+    return {"detail": "Frontend not built. DIST missing on server."}
+
+
+@app.get("/{full_path:path}")
+def serve_spa(full_path: str):
+    if full_path.startswith("api"):
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    candidate = DIST_DIR / full_path
+    if candidate.is_file():
+        return FileResponse(candidate)
+
+    if INDEX_HTML.exists():
+        return FileResponse(INDEX_HTML)
+
+    raise HTTPException(status_code=404, detail="Frontend not built")
